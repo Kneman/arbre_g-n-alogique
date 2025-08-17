@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arbre Généalogique</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>Arbre Généalogique</h1>
+
+  <div id="form-container">
+    <form id="memberForm">
+      <input type="text" id="name" placeholder="Prénom" required>
+      <input type="text" id="surname" placeholder="Nom" required>
+      <input type="text" id="parent" placeholder="Parent (Prénom Nom)">
+      <select id="styleSelect">
+        <option value="classic">Classique</option>
+        <option value="bubble">Bubble</option>
+        <option value="modern">Moderne</option>
+      </select>
+      <button type="submit">Ajouter membre</button>
+    </form>
+    <button id="resetBtn">Réinitialiser l'arbre</button>
+  </div>
+
+  <div id="tree-container" class="classic"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
