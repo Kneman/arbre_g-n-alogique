@@ -3,29 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Arbre Généalogique</title>
+  <title>Mon Arbre Généalogique</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Arbre Généalogique</h1>
-
-  <div id="form-container">
-    <form id="memberForm">
-      <input type="text" id="name" placeholder="Prénom" required>
-      <input type="text" id="surname" placeholder="Nom" required>
-      <input type="text" id="parent" placeholder="Parent (Prénom Nom)">
-      <select id="styleSelect">
-        <option value="classic">Classique</option>
-        <option value="bubble">Bubble</option>
-        <option value="modern">Moderne</option>
-      </select>
-      <button type="submit">Ajouter membre</button>
-    </form>
-    <button id="resetBtn">Réinitialiser l'arbre</button>
+  <!-- Écran d’accueil -->
+  <div id="welcome-screen">
+    <h1>Bienvenue 👋</h1>
+    <p>Entre ton prénom pour commencer ton arbre généalogique :</p>
+    <input type="text" id="rootName" placeholder="Ton prénom">
+    <button id="startBtn">Commencer</button>
   </div>
 
-  <div id="tree-container" class="classic"></div>
+  <!-- Interface arbre -->
+  <div id="tree-container" style="display:none;">
+    <h2>🌳 Mon Arbre Généalogique</h2>
+    <div class="controls">
+      <button id="exportJSON">📤 Exporter JSON</button>
+      <button id="importJSON">📥 Importer JSON</button>
+      <button id="exportPNG">🖼️ Exporter en image</button>
+    </div>
+    <svg id="familyTree"></svg>
+  </div>
 
+  <!-- Librairie D3.js -->
+  <script src="d3.min.js"></script>
+  <!-- Script principal -->
   <script src="script.js"></script>
 </body>
 </html>
