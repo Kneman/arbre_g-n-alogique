@@ -1,0 +1,71 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 10px;
+}
+
+h1 {
+  text-align: center;
+}
+
+#form-container {
+  margin-top: 20px;
+}
+
+#form-container form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#form-container input, #form-container button, #form-container select {
+  padding: 10px;
+  font-size: 16px;
+}
+
+#tree-container {
+  margin-top: 20px;
+  min-height: 400px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  cursor: grab;
+  overflow: hidden;
+  position: relative;
+  transform-origin: top left;
+}
+
+.member {
+  text-align: center;
+  padding: 8px;
+  margin: 10px;
+  display: inline-block;
+  position: relative;
+}
+
+.children {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  position: relative;
+}
+
+.children::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  border-left: 2px solid #333;
+  height: 20px;
+}
+
+.classic .member { background-color: #f0f0f0; border: 1px solid #333; }
+.bubble .member { background-color: #9cf; border-radius: 50%; }
+.modern .member { background-color: #ff9; border-radius: 5px; }
+
+@media (max-width: 600px) {
+  #tree-container { flex-direction: column; align-items: center; }
+  .children { flex-direction: column; align-items: center; }
+  .member { width: 80%; max-width: 300px; }
+  #form-container input, #form-container button, #form-container select { width: 100%; }
+}
