@@ -7,29 +7,26 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Accueil : entrer son prénom -->
+  <!-- Accueil -->
   <div id="welcome-screen">
-    <h1>Bienvenue 🌳</h1>
-    <p>Entrez votre prénom pour commencer votre arbre généalogique :</p>
-    <input type="text" id="rootName" placeholder="Votre prénom">
+    <h1>🌳 Bienvenue</h1>
+    <p>Entre ton prénom pour commencer :</p>
+    <input type="text" id="rootName" placeholder="Ton prénom">
     <button id="startBtn">Commencer</button>
   </div>
 
-  <!-- Interface arbre -->
+  <!-- Arbre -->
   <div id="tree-container" style="display:none;">
-    <header>
-      <h2>Mon arbre généalogique</h2>
-      <button id="exportJSON">📤 Exporter JSON</button>
-      <button id="importJSON">📥 Importer JSON</button>
+    <h2>Mon Arbre Généalogique</h2>
+    <div class="controls">
+      <button id="toggleLayout">🔄 Changer le style</button>
+      <button id="exportJSON">📤 Exporter</button>
+      <button id="importJSON">📥 Importer</button>
       <button id="exportPNG">🖼 Exporter en image</button>
-    </header>
-    <!-- Zone où D3.js dessinera l’arbre -->
-    <svg id="familyTree"></svg>
+    </div>
+    <div id="tree" class="vertical"></div>
   </div>
 
-  <!-- Librairie D3.js -->
-  <script src="d3.min.js"></script>
-  <!-- Ton script -->
   <script src="script.js"></script>
 </body>
 </html>
