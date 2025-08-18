@@ -6,18 +6,17 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Mon Arbre Généalogique</h1>
+  <h1>🌳 Mon Arbre Généalogique</h1>
 
-  <div class="toolbar">
-    <button class="btn-primary" onclick="toggleLayout()">Changer le style</button>
-    <button class="btn-success" onclick="exportTree()">Exporter</button>
-    <button class="btn-warning" onclick="importTree()">Importer</button>
-    <button class="btn-danger" onclick="exportImage()">Exporter en image</button>
+  <div class="controls">
+    <button onclick="changeStyle()">🎨 Changer le style</button>
+    <button onclick="exportData()">💾 Exporter</button>
+    <button onclick="importData()">📂 Importer</button>
+    <button onclick="exportImage()">🖼️ Exporter en image</button>
   </div>
 
   <div id="tree-container"></div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
