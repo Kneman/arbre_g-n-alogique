@@ -2,31 +2,22 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Arbre Généalogique</title>
+  <title>Mon Arbre Généalogique</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Accueil -->
-  <div id="welcome-screen">
-    <h1>🌳 Bienvenue</h1>
-    <p>Entre ton prénom pour commencer :</p>
-    <input type="text" id="rootName" placeholder="Ton prénom">
-    <button id="startBtn">Commencer</button>
+  <h1>Mon Arbre Généalogique</h1>
+
+  <div class="toolbar">
+    <button class="btn-primary" onclick="toggleLayout()">Changer le style</button>
+    <button class="btn-success" onclick="exportTree()">Exporter</button>
+    <button class="btn-warning" onclick="importTree()">Importer</button>
+    <button class="btn-danger" onclick="exportImage()">Exporter en image</button>
   </div>
 
-  <!-- Arbre -->
-  <div id="tree-container" style="display:none;">
-    <h2>Mon Arbre Généalogique</h2>
-    <div class="controls">
-      <button id="toggleLayout">🔄 Changer le style</button>
-      <button id="exportJSON">📤 Exporter</button>
-      <button id="importJSON">📥 Importer</button>
-      <button id="exportPNG">🖼 Exporter en image</button>
-    </div>
-    <div id="tree" class="vertical"></div>
-  </div>
+  <div id="tree-container"></div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
