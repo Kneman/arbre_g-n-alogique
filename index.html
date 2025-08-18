@@ -1,22 +1,47 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mon Arbre Généalogique</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>🌳 Mon Arbre Généalogique</h1>
-
-  <div class="controls">
-    <button onclick="changeStyle()">🎨 Changer le style</button>
-    <button onclick="exportData()">💾 Exporter</button>
-    <button onclick="importData()">📂 Importer</button>
-    <button onclick="exportImage()">🖼️ Exporter en image</button>
+  <!-- Écran d’accueil -->
+  <div id="welcome" class="welcome hidden">
+    <div class="card">
+      <h1>🌳 Bienvenue</h1>
+      <p>Entre le prénom de départ (toi ou la personne centrale) :</p>
+      <input id="startName" type="text" placeholder="Prénom" />
+      <div class="row">
+        <button id="startBtn" class="btn primary">Commencer</button>
+      </div>
+      <small class="muted">Tu pourras tout modifier ensuite.</small>
+    </div>
   </div>
 
-  <div id="tree-container"></div>
+  <header class="topbar">
+    <div class="title">Mon Arbre Généalogique</div>
+    <div class="actions">
+      <button id="toggleTheme" class="btn">🎨 Changer le style</button>
+      <button id="resetBtn" class="btn danger">♻️ Réinitialiser</button>
+      <button id="exportBtn" class="btn">💾 Exporter</button>
+      <button id="importBtn" class="btn">📂 Importer</button>
+      <button id="pngBtn" class="btn">🖼 Exporter image</button>
+    </div>
+  </header>
 
+  <!-- Conteneur principal (lignes tracées via CSS + structure UL/LI) -->
+  <main id="canvas">
+    <div id="tree"></div>
+  </main>
+
+  <footer class="footer">
+    <span class="muted">Sauvegarde automatique – partagé via Export/Import JSON.</span>
+  </footer>
+
+  <!-- html2canvas pour export PNG -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
