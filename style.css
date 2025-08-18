@@ -1,112 +1,78 @@
-// ======================
-// VARIABLES GLOBALES
-// ======================
-let treeData = {}; // Structure de l'arbre
-let root = null;   // Racine de l'arbre (le premier membre)
-let svg, treeLayout, linkGroup, nodeGroup;
-let duration = 300;
-
-// ======================
-// LANCEMENT DU SITE
-// ======================
-document.getElementById("startBtn").addEventListener("click", () => {
-  const name = document.getElementById("rootName").value.trim();
-  if (!name) return alert("Entre ton prénom pour commencer !");
-  
-  // Création du 1er membre
-  treeData = {
-    name: name,
-    children: []
-  };
-  root = d3.hierarchy(treeData);
-
-  // Affichage interface arbre
-  document.getElementById("welcome-screen").style.display = "none";
-  document.getElementById("tree-container").style.display = "block";
-
-  initTree();
-  update(root);
-  saveTree();
-});
-
-// ======================
-// INITIALISATION D3.JS
-// ======================
-function initTree() {
-  svg = d3.select("#familyTree")
-    .attr("width", "100%")
-    .attr("height", "100%")
-    .append("g")
-    .attr("transform", "translate(50,50)");
-
-  treeLayout = d3.tree().size([window.innerHeight - 150, window.innerWidth - 150]);
-  linkGroup = svg.append("g").attr("class", "links");
-  nodeGroup = svg.append("g").attr("class", "nodes");
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #f5f9ff;
+  text-align: center;
 }
 
-// ======================
-// MISE À JOUR DE L'ARBRE
-// ======================
-function update(source) {
-  let treeData = treeLayout(root);
-
-  let nodes = treeData.descendants();
-  let links = treeData.links();
-
-  // ----- LIENS -----
-  let link = linkGroup.selectAll("path")
-    .data(links, d => d.target.id);
-
-  link.enter().append("path")
-    .attr("class", "link")
-    .merge(link)
-    .attr("d", d3.linkHorizontal()
-      .x(d => d.y)
-      .y(d => d.x)
-    );
-
-  link.exit().remove();
-
-  // ----- NODES -----
-  nodes.forEach((d, i) => { d.id = i; });
-
-  let node = nodeGroup.selectAll("g")
-    .data(nodes, d => d.id);
-
-  let nodeEnter = node.enter().append("g")
-    .attr("class", "node")
-    .attr("transform", d => `translate(${source.y0 || 0},${source.x0 || 0})`)
-    .on("click", (event, d) => showNodeOptions(d));
-
-  nodeEnter.append("circle")
-    .attr("r", 20);
-
-  nodeEnter.append("text")
-    .attr("dy", ".35em")
-    .attr("x", 0)
-    .style("text-anchor", "middle")
-    .text(d => d.data.name);
-
-  let nodeUpdate = nodeEnter.merge(node);
-
-  nodeUpdate.transition().duration(duration)
-    .attr("transform", d => `translate(${d.y},${d.x})`);
-
-  node.exit().remove();
-
-  nodes.forEach(d => {
-    d.x0 = d.x;
-    d.y0 = d.y;
-  });
+#welcome-screen {
+  margin-top: 20vh;
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  width: 90%;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-// ======================
-// OPTIONS SUR UN NOEUD
-// ======================
-function showNodeOptions(d) {
-  const action = prompt(
-    `Que faire avec ${d.data.name} ?\n\n1️⃣ Ajouter membre\n2️⃣ Modifier prénom\n3️⃣ Supprimer\n\nChoisis 1, 2 ou 3 :`
-  );
+button {
+  padding: 10px 15px;
+  margin: 5px;
+  border: none;
+  border-radius: 8px;
+  background: #42a5f5;
+  color: white;
+  cursor: pointer;
+}
+button:hover { background: #1e88e5; }
+
+/* Conteneur arbre */
+#tree {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+  flex-wrap: wrap;
+}
+
+/* Cartes des personnes */
+.person {
+  background: #90caf9;
+  border: 2px solid #1565c0;
+  border-radius: 10px;
+  padding: 10px;
+  margin: 8px;
+  min-width: 80px;
+  text-align: center;
+  color: white;
+  font-weight: bold;
+  position: relative;
+}
+
+/* Mode vertical (colonnes parents/enfants) */
+.vertical {
+  flex-direction: column;
+}
+.vertical .generation {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+/* Mode horizontal (organigramme) */
+.horizontal {
+  flex-direction: row;
+  align-items: flex-start;
+}
+.horizontal .generation {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 20px;
+}  );
 
   if (action === "1") addMember(d);
   else if (action === "2") editMember(d);
