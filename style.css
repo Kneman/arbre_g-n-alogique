@@ -1,213 +1,60 @@
 body {
   font-family: Arial, sans-serif;
+  text-align: center;
+  background: #f8f9fa;
   margin: 0;
-  padding: 0;
-  background: #f5f9ff;
-  text-align: center;
-}
-
-#welcome-screen {
-  margin-top: 20vh;
-  background: white;
   padding: 20px;
-  border-radius: 15px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  width: 90%;
-  max-width: 400px;
-  margin-left: auto;
-  margin-right: auto;
 }
-
+h1 {
+  margin-bottom: 20px;
+}
+.toolbar {
+  margin-bottom: 20px;
+}
 button {
-  padding: 10px 15px;
   margin: 5px;
+  padding: 8px 12px;
   border: none;
-  border-radius: 8px;
-  background: #42a5f5;
-  color: white;
+  border-radius: 6px;
   cursor: pointer;
+  font-size: 14px;
 }
-button:hover { background: #1e88e5; }
+button:hover {
+  opacity: 0.9;
+}
+.btn-primary { background: #007bff; color: white; }
+.btn-danger { background: #dc3545; color: white; }
+.btn-success { background: #28a745; color: white; }
+.btn-warning { background: #ffc107; color: black; }
 
-/* Conteneur arbre */
-#tree {
+#tree-container {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  padding: 20px;
-  flex-wrap: wrap;
+  margin-top: 20px;
 }
 
-/* Cartes des personnes */
-.person {
-  background: #90caf9;
-  border: 2px solid #1565c0;
-  border-radius: 10px;
+.member {
+  border: 2px solid #007bff;
+  background: white;
   padding: 10px;
-  margin: 8px;
-  min-width: 80px;
-  text-align: center;
-  color: white;
-  font-weight: bold;
+  margin: 10px;
+  border-radius: 8px;
   position: relative;
+  min-width: 100px;
+  box-shadow: 2px 2px 6px rgba(0,0,0,0.1);
 }
 
-/* Mode vertical (colonnes parents/enfants) */
-.vertical {
-  flex-direction: column;
+.member .actions {
+  margin-top: 5px;
 }
-.vertical .generation {
+
+.line {
+  border-left: 2px solid #333;
+  margin: auto;
+  height: 20px;
+}
+
+.children {
   display: flex;
   justify-content: center;
-  margin: 20px 0;
 }
-
-/* Mode horizontal (organigramme) */
-.horizontal {
-  flex-direction: row;
-  align-items: flex-start;
-}
-.horizontal .generation {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin: 0 20px;
-}  );
-
-  if (action === "1") addMember(d);
-  else if (action === "2") editMember(d);
-  else if (action === "3") deleteMember(d);
-}
-
-// ======================
-// AJOUTER MEMBRE
-// ======================
-function addMember(parentNode) {
-  const relation = prompt("Relation ? (enfant, parent, conjoint, frère/soeur)");
-  const name = prompt("Prénom du membre ?");
-  if (!name) return;
-
-  let newMember = { name: name, children: [] };
-
-  if (relation === "enfant") {
-    if (!parentNode.data.children) parentNode.data.children = [];
-    parentNode.data.children.push(newMember);
-  } else if (relation === "parent") {
-    let newParent = { name: name, children: [structuredClone(parentNode.data)] };
-    treeData = newParent;
-    root = d3.hierarchy(treeData);
-  } else if (relation === "conjoint" || relation === "frère/soeur") {
-    if (!parentNode.parent) {
-      alert("Impossible d’ajouter ce type de relation ici.");
-      return;
-    }
-    parentNode.parent.data.children.push(newMember);
-  } else {
-    alert("Relation non reconnue.");
-    return;
-  }
-
-  root = d3.hierarchy(treeData);
-  update(parentNode);
-  saveTree();
-}
-
-// ======================
-// MODIFIER MEMBRE
-// ======================
-function editMember(node) {
-  const newName = prompt("Nouveau prénom :", node.data.name);
-  if (!newName) return;
-  node.data.name = newName;
-  update(node);
-  saveTree();
-}
-
-// ======================
-// SUPPRIMER MEMBRE
-// ======================
-function deleteMember(node) {
-  if (!node.parent) return alert("Impossible de supprimer la racine !");
-  let siblings = node.parent.data.children;
-  node.parent.data.children = siblings.filter(c => c !== node.data);
-  root = d3.hierarchy(treeData);
-  update(node.parent);
-  saveTree();
-}
-
-// ======================
-// SAUVEGARDE LOCALE
-// ======================
-function saveTree() {
-  localStorage.setItem("familyTree", JSON.stringify(treeData));
-}
-
-function loadTree() {
-  const saved = localStorage.getItem("familyTree");
-  if (saved) {
-    treeData = JSON.parse(saved);
-    root = d3.hierarchy(treeData);
-    document.getElementById("welcome-screen").style.display = "none";
-    document.getElementById("tree-container").style.display = "block";
-    initTree();
-    update(root);
-  }
-}
-loadTree();
-
-// ======================
-// EXPORTER / IMPORTER JSON
-// ======================
-document.getElementById("exportJSON").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify(treeData, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  let a = document.createElement("a");
-  a.href = url;
-  a.download = "arbre.json";
-  a.click();
-});
-
-document.getElementById("importJSON").addEventListener("click", () => {
-  let input = document.createElement("input");
-  input.type = "file";
-  input.accept = ".json";
-  input.onchange = e => {
-    let file = e.target.files[0];
-    let reader = new FileReader();
-    reader.onload = event => {
-      treeData = JSON.parse(event.target.result);
-      root = d3.hierarchy(treeData);
-      update(root);
-      saveTree();
-    };
-    reader.readAsText(file);
-  };
-  input.click();
-});
-
-// ======================
-// EXPORTER EN IMAGE (PNG)
-// ======================
-document.getElementById("exportPNG").addEventListener("click", () => {
-  let svgElement = document.getElementById("familyTree");
-  let serializer = new XMLSerializer();
-  let svgString = serializer.serializeToString(svgElement);
-
-  let canvas = document.createElement("canvas");
-  let ctx = canvas.getContext("2d");
-  let img = new Image();
-  let svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-  let url = URL.createObjectURL(svgBlob);
-
-  img.onload = function () {
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.drawImage(img, 0, 0);
-    let pngUrl = canvas.toDataURL("image/png");
-    let a = document.createElement("a");
-    a.href = pngUrl;
-    a.download = "arbre.png";
-    a.click();
-  };
-  img.src = url;
-});
