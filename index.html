@@ -2,45 +2,133 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mon Arbre Généalogique</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Arbre Généalogique</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <!-- Écran d’accueil -->
-  <div id="welcome" class="welcome hidden">
+  <div id="start" class="start-screen">
     <div class="card">
       <h1>🌳 Bienvenue</h1>
-      <p>Entre le prénom de départ (toi ou la personne centrale) :</p>
-      <input id="startName" type="text" placeholder="Prénom" />
+      <p>Entre ton prénom pour créer la première fiche :</p>
+      <input id="startFirst" type="text" placeholder="Prénom" />
       <div class="row">
         <button id="startBtn" class="btn primary">Commencer</button>
       </div>
-      <small class="muted">Tu pourras tout modifier ensuite.</small>
+      <small class="muted">Tu pourras ajouter toute la famille ensuite.</small>
     </div>
   </div>
 
-  <header class="topbar">
-    <div class="title">Mon Arbre Généalogique</div>
-    <div class="actions">
-      <button id="toggleTheme" class="btn">🎨 Changer le style</button>
+  <!-- Barre d’actions -->
+  <header class="topbar hidden" id="topbar">
+    <div class="left">
+      <strong>Mon Arbre Généalogique</strong>
+    </div>
+    <div class="right">
+      <button id="exportBtn" class="btn">💾 Export JSON</button>
+      <button id="importBtn" class="btn">📂 Import JSON</button>
+      <button id="pngBtn" class="btn">🖼 PNG</button>
+      <span class="sep"></span>
+      <button id="zoomOutBtn" class="btn">➖</button>
+      <button id="zoomResetBtn" class="btn">🔄</button>
+      <button id="zoomInBtn" class="btn">➕</button>
+      <span class="sep"></span>
       <button id="resetBtn" class="btn danger">♻️ Réinitialiser</button>
-      <button id="exportBtn" class="btn">💾 Exporter</button>
-      <button id="importBtn" class="btn">📂 Importer</button>
-      <button id="pngBtn" class="btn">🖼 Exporter image</button>
     </div>
   </header>
 
-  <!-- Conteneur principal (lignes tracées via CSS + structure UL/LI) -->
-  <main id="canvas">
-    <div id="tree"></div>
+  <!-- Zone pan/zoom -->
+  <main id="viewport" class="viewport hidden">
+    <div id="stage" class="stage" style="transform: translate(0px,0px) scale(1)">
+      <!-- L’arbre est rendu ici -->
+      <div id="tree"></div>
+    </div>
   </main>
 
-  <footer class="footer">
-    <span class="muted">Sauvegarde automatique – partagé via Export/Import JSON.</span>
-  </footer>
+  <!-- Pop-up fiche (lecture + actions) -->
+  <div id="viewModal" class="modal hidden">
+    <div class="modal-content">
+      <button class="close" data-close>×</button>
+      <h2 id="v_name"></h2>
+      <div class="grid">
+        <div><b>Naissance :</b> <span id="v_birth"></span></div>
+        <div><b>En vie :</b> <span id="v_alive"></span></div>
+        <div id="v_death_wrap"><b>Décès :</b> <span id="v_death"></span></div>
+      </div>
 
-  <!-- html2canvas pour export PNG -->
+      <div class="section">
+        <div class="section-title">Ajouter un membre lié</div>
+        <div class="quick-actions">
+          <button class="btn small" data-add="mother">Mère</button>
+          <button class="btn small" data-add="father">Père</button>
+          <button class="btn small" data-add="siblingF">Sœur</button>
+          <button class="btn small" data-add="siblingM">Frère</button>
+          <button class="btn small" data-add="spouse">Conjoint</button>
+          <button class="btn small" data-add="child">Enfant</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">Lier avec un membre existant</div>
+        <div class="link-existing">
+          <select id="linkType">
+            <option value="spouse">Conjoint</option>
+            <option value="parent">Est parent de…</option>
+            <option value="child">Est enfant de…</option>
+            <option value="sibling">Frère/Sœur de…</option>
+          </select>
+          <select id="linkTarget"></select>
+          <button id="linkBtn" class="btn">🔗 Lier</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <button id="editBtn" class="btn">✏️ Modifier</button>
+        <button id="deleteBtn" class="btn danger">🗑 Supprimer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pop-up formulaire (ajout / édition) -->
+  <div id="formModal" class="modal hidden">
+    <div class="modal-content">
+      <button class="close" data-close>×</button>
+      <h2 id="f_title">Ajouter</h2>
+
+      <div class="form">
+        <div class="row">
+          <label>Nom</label>
+          <input id="f_last" type="text" placeholder="Nom de famille" />
+        </div>
+        <div class="row">
+          <label>Prénom</label>
+          <input id="f_first" type="text" placeholder="Prénom" />
+        </div>
+        <div class="row">
+          <label>Date de naissance</label>
+          <input id="f_birth" type="date" />
+        </div>
+        <div class="row">
+          <label>En vie ?</label>
+          <select id="f_alive">
+            <option value="true">Oui</option>
+            <option value="false">Non</option>
+          </select>
+        </div>
+        <div class="row" id="deathRow" style="display:none">
+          <label>Date de décès</label>
+          <input id="f_death" type="date" />
+        </div>
+      </div>
+
+      <div class="section">
+        <button id="saveFormBtn" class="btn primary">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- html2canvas pour PNG -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="script.js"></script>
 </body>
