@@ -1,459 +1,422 @@
-/***********************
- *  MODÈLE DE DONNÉES
- ***********************/
-const LS_KEY = "genea_tree_v1";
+/***************
+ *  Données
+ ***************/
+const LS_KEY = "genea_v2";
 
-let state = loadState() || {
-  persons: {},    // {id:Person}
-  rootId: null,   // personne centrale choisie
-  theme: "natural"// "natural" | "pro"
+let state = load() || {
+  persons:{},  // id -> person
+  rootId:null
 };
 
-function uid(){ return "p" + Math.random().toString(36).slice(2,10); }
+function uid(){ return "p"+Math.random().toString(36).slice(2,10); }
 
-function createPerson(name, gender=null){
+function makePerson({first,last,birth,alive=true,death=null,gender=null}){
   const id = uid();
   return state.persons[id] = {
-    id, name, gender, fatherId:null, motherId:null, spouseId:null, childrenIds:[]
+    id,
+    first:first||"",
+    last:last||"",
+    birth:birth||"",
+    alive:alive!==false,
+    death:death||null,
+    gender:gender,          // "m" | "f" | null (père/mère fixent automatiquement)
+    fatherId:null,
+    motherId:null,
+    spouseId:null,          // (simple, un conjoint — extensible)
+    childrenIds:[]          // liens descendants
   };
 }
 
-/*************************
- *  SAUVEGARDE / CHARGEMENT
- *************************/
-function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
-function loadState(){
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+function load(){
   try { return JSON.parse(localStorage.getItem(LS_KEY)); } catch { return null; }
 }
 
-/******************
- *  INITIALISATION
- ******************/
-const q = s => document.querySelector(s);
-const treeEl = q("#tree");
-const welcome = q("#welcome");
+/*****************
+ *  DOM Helpers
+ *****************/
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
 
-q("#toggleTheme").onclick = () => {
-  state.theme = state.theme === "natural" ? "pro" : "natural";
-  applyTheme(); render();
-  saveState();
+/*****************
+ *  Boot
+ *****************/
+const startEl = $("#start");
+const topbar = $("#topbar");
+const viewport = $("#viewport");
+const stage = $("#stage");
+const treeEl = $("#tree");
+
+$("#startBtn").onclick = () => {
+  const first = $("#startFirst").value.trim();
+  if(!first) return alert("Entre un prénom.");
+  const p = makePerson({first});
+  state.rootId = p.id;
+  save();
+  startEl.classList.add("hidden");
+  topbar.classList.remove("hidden");
+  viewport.classList.remove("hidden");
+  render();
 };
 
-q("#resetBtn").onclick = () => {
-  if(confirm("Réinitialiser l'arbre (supprime les données locales) ?")){
-    localStorage.removeItem(LS_KEY);
-    location.reload();
-  }
+$("#resetBtn").onclick = () => {
+  if(confirm("Tout réinitialiser ?")){ localStorage.removeItem(LS_KEY); location.reload(); }
 };
 
-q("#exportBtn").onclick = () => {
+$("#exportBtn").onclick = () => {
   const blob = new Blob([JSON.stringify(state,null,2)], {type:"application/json"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = "arbre_genealogique.json"; a.click();
+  a.href = url; a.download = "arbre.json"; a.click();
   URL.revokeObjectURL(url);
 };
 
-q("#importBtn").onclick = () => {
+$("#importBtn").onclick = () => {
   const inp = document.createElement("input");
   inp.type="file"; inp.accept=".json,application/json";
   inp.onchange = e => {
     const f = e.target.files[0]; if(!f) return;
-    const rd = new FileReader();
-    rd.onload = ev => {
+    const r = new FileReader();
+    r.onload = ev => {
       try {
         const data = JSON.parse(ev.target.result);
         if(!data.persons || !data.rootId) throw 0;
-        state = data; applyTheme(); render(); saveState();
+        state = data; save(); mount();
       } catch {
         alert("Fichier invalide.");
       }
     };
-    rd.readAsText(f);
+    r.readAsText(f);
   };
   inp.click();
 };
 
-q("#pngBtn").onclick = async () => {
-  // exporte uniquement l'arbre
-  const el = q("#canvas");
-  const canvas = await html2canvas(el, {backgroundColor:"#ffffff", scale:2});
+$("#pngBtn").onclick = async () => {
+  const canvas = await html2canvas(stage, {backgroundColor:"#ffffff", scale:2});
   const a = document.createElement("a");
   a.download = "arbre.png";
   a.href = canvas.toDataURL("image/png");
   a.click();
 };
 
-q("#startBtn").onclick = () => {
-  const name = q("#startName").value.trim();
-  if(!name) return alert("Entre un prénom !");
-  const p = createPerson(name, null);
-  state.rootId = p.id;
-  saveState();
-  welcome.classList.add("hidden");
-  render();
-};
+/***************
+ *  Pan / Zoom
+ ***************/
+let zoom = 1;
+let pan = {x:0,y:0};
+const ZSTEP = 0.1, ZMIN=0.3, ZMAX=2.2;
 
-function applyTheme(){
-  document.body.classList.toggle("theme-pro", state.theme === "pro");
+function applyTransform(){
+  stage.style.transform = `translate(${pan.x}px,${pan.y}px) scale(${zoom})`;
 }
 
-(function boot(){
-  applyTheme();
-  if(!state.rootId){
-    welcome.classList.remove("hidden");
-  }else{
-    welcome.classList.add("hidden");
-    render();
-  }
-})();
+$("#zoomInBtn").onclick = ()=>{ zoom = Math.min(ZMAX, zoom+ZSTEP); applyTransform(); };
+$("#zoomOutBtn").onclick = ()=>{ zoom = Math.max(ZMIN, zoom-ZSTEP); applyTransform(); };
+$("#zoomResetBtn").onclick = ()=>{ zoom = 1; pan={x:0,y:0}; applyTransform(); };
 
-/****************
- *  RENDU ARBRE
- ****************/
+let isPanning=false, last={x:0,y:0};
+viewport.addEventListener("mousedown", e=>{ isPanning=true; last={x:e.clientX,y:e.clientY}; });
+viewport.addEventListener("mousemove", e=>{
+  if(!isPanning) return;
+  pan.x += (e.clientX-last.x);
+  pan.y += (e.clientY-last.y);
+  last={x:e.clientX,y:e.clientY};
+  applyTransform();
+});
+window.addEventListener("mouseup", ()=> isPanning=false);
+
+// Touch
+viewport.addEventListener("touchstart", e=>{
+  if(e.touches.length===1){
+    isPanning=true; last={x:e.touches[0].clientX,y:e.touches[0].clientY};
+  }
+},{passive:true});
+viewport.addEventListener("touchmove", e=>{
+  if(isPanning && e.touches.length===1){
+    pan.x += (e.touches[0].clientX-last.x);
+    pan.y += (e.touches[0].clientY-last.y);
+    last={x:e.touches[0].clientX,y:e.touches[0].clientY};
+    applyTransform();
+  }
+},{passive:true});
+viewport.addEventListener("touchend", ()=> isPanning=false);
+
+/*****************
+ *  Rendering
+ *****************/
+function mount(){
+  if(!state.rootId){
+    startEl.classList.remove("hidden");
+    topbar.classList.add("hidden");
+    viewport.classList.add("hidden");
+    return;
+  }
+  startEl.classList.add("hidden");
+  topbar.classList.remove("hidden");
+  viewport.classList.remove("hidden");
+  render();
+}
+
 function render(){
   treeEl.innerHTML = "";
-  if(!state.rootId) return;
 
+  // remonter au plus ancien ancêtre existant
   const topId = findTopAncestor(state.rootId);
-  const rootLi = renderSubtreeFrom(topId, new Set());
+  const renderedCouples = new Set();
+  const rootLi = renderSubtree(topId, renderedCouples);
 
-  const wrapper = document.createElement("div");
-  wrapper.className = "tree-root";
+  const wrap = document.createElement("div");
+  wrap.className = "tree-root";
   const ul = document.createElement("ul");
   ul.appendChild(rootLi);
-  wrapper.appendChild(ul);
-
-  treeEl.appendChild(wrapper);
+  wrap.appendChild(ul);
+  treeEl.appendChild(wrap);
 }
 
-/* remonte au plus ancien ancêtre disponible */
+/* remonte tant qu’il existe un père/mère */
 function findTopAncestor(id){
   let cur = state.persons[id];
   while(true){
-    const father = cur.fatherId ? state.persons[cur.fatherId] : null;
-    const mother = cur.motherId ? state.persons[cur.motherId] : null;
-    if(!father && !mother) return cur.id;
-    cur = father || mother;
+    const f = cur.fatherId && state.persons[cur.fatherId];
+    const m = cur.motherId && state.persons[cur.motherId];
+    if(!f && !m) return cur.id;
+    cur = f || m;
   }
 }
 
-/* Render un couple (ou personne seule) + enfants */
-function renderSubtreeFrom(personId, renderedCouples){
-  const p = state.persons[personId];
+/* sous-arbre depuis une personne (fusionne le conjoint pour afficher un couple) */
+function renderSubtree(id, seenCouples){
+  const p = state.persons[id];
   const spouse = p.spouseId ? state.persons[p.spouseId] : null;
-
   const coupleKey = spouse ? [p.id, spouse.id].sort().join("_") : p.id;
-  if(renderedCouples.has(coupleKey)){
-    // évite de rendre deux fois le même couple
+  if(seenCouples.has(coupleKey)){
     const li = document.createElement("li");
     li.appendChild(renderNode(p, spouse));
     return li;
   }
-  renderedCouples.add(coupleKey);
+  seenCouples.add(coupleKey);
 
   const li = document.createElement("li");
   li.appendChild(renderNode(p, spouse));
 
-  // enfants du couple/personne
-  const kids = getChildrenOfCouple(p, spouse);
+  const kids = getChildrenOf(p, spouse);
   if(kids.length){
     const ul = document.createElement("ul");
-    for(const kid of kids){
-      ul.appendChild(renderSubtreeFrom(kid.id, renderedCouples));
-    }
+    kids.forEach(k => ul.appendChild(renderSubtree(k.id, seenCouples)));
     li.appendChild(ul);
   }
   return li;
 }
 
-/* Récupère enfants d'un couple ou d'un parent solo */
-function getChildrenOfCouple(p, spouse){
-  const res = [];
-  const seen = new Set();
-  for(const id of p.childrenIds){ seen.add(id); }
-  if(spouse){
-    for(const id of spouse.childrenIds){ seen.add(id); }
-  }
-  for(const id of seen){
-    const c = state.persons[id];
-    // vérifie cohérence (parenté)
-    if(
-      (c.fatherId === p.id || c.motherId === p.id) ||
-      (spouse && (c.fatherId === spouse.id || c.motherId === spouse.id))
-    ){
-      res.push(c);
-    }
-  }
-  // tri optionnel : par nom
-  res.sort((a,b)=>a.name.localeCompare(b.name));
-  return res;
+/* enfants d’un parent seul ou d’un couple (frères/soeurs côte à côte) */
+function getChildrenOf(p, spouse){
+  const ids = new Set([...(p.childrenIds||[])]);
+  if(spouse) (spouse.childrenIds||[]).forEach(id=>ids.add(id));
+  const kids = [...ids].map(id=>state.persons[id]).filter(Boolean);
+
+  // garder seulement ceux qui sont liés à au moins l’un du couple par filiation
+  const filtered = kids.filter(c =>
+    c.fatherId===p.id || c.motherId===p.id || (spouse && (c.fatherId===spouse.id || c.motherId===spouse.id))
+  );
+  // tri alpha pour stabilité
+  filtered.sort((a,b)=> (a.last+a.first).localeCompare(b.last+b.first));
+  return filtered;
 }
 
-/* rend le bloc couple/personne + boutons */
+/* bloc visuel */
 function renderNode(p, spouse){
   const node = document.createElement("div");
   node.className = "node";
 
-  node.appendChild(renderPersonCard(p));
+  node.appendChild(personCard(p));
 
   if(spouse){
     const sep = document.createElement("div");
     sep.className = "couple-sep";
     sep.textContent = "—";
     node.appendChild(sep);
-    node.appendChild(renderPersonCard(spouse));
+    node.appendChild(personCard(spouse));
   }
-
   return node;
 }
 
-function renderPersonCard(person){
-  const box = document.createElement("div");
-  box.className = "person";
-  const name = document.createElement("div");
-  name.className = "name";
-  name.textContent = person.name;
+function personCard(p){
+  const card = document.createElement("div");
+  card.className = "card-person";
+
+  const nm = document.createElement("div");
+  nm.className = "name";
+  nm.textContent = `${p.first || ""} ${p.last || ""}`.trim() || "Sans nom";
+
   const meta = document.createElement("div");
   meta.className = "meta";
-  meta.textContent = person.gender === "m" ? "Homme" : person.gender === "f" ? "Femme" : "—";
+  meta.textContent = p.birth ? `Né(e) ${p.birth}` : "—";
+
   const actions = document.createElement("div");
-  actions.className = "p-actions";
+  actions.className = "actions";
 
-  actions.appendChild(makeBtn("➕", ()=> addMenu(person.id)));
-  actions.appendChild(makeBtn("✏️", ()=> editPerson(person.id)));
-  actions.appendChild(makeBtn("🔗", ()=> linkMenu(person.id)));
-  actions.appendChild(makeBtn("🗑️", ()=> deletePerson(person.id), "danger"));
+  actions.appendChild(makeAction("👁", ()=> openView(p.id), "Voir"));
+  actions.appendChild(makeAction("➕", ()=> openQuickAdd(p.id), "Ajouter"));
+  actions.appendChild(makeAction("✏️", ()=> openEdit(p.id), "Modifier"));
+  actions.appendChild(makeAction("🗑", ()=> removePersonPrompt(p.id), "Supprimer","danger"));
 
-  box.appendChild(name); box.appendChild(meta); box.appendChild(actions);
-  return box;
+  card.appendChild(nm); card.appendChild(meta); card.appendChild(actions);
+  return card;
 }
 
-function makeBtn(label, fn, extraClass=""){
+function makeAction(txt, fn, title, extra){
   const b = document.createElement("button");
-  b.className = "pbtn" + (extraClass?(" "+extraClass):"");
-  b.textContent = label;
-  b.onclick = fn;
+  b.className = "abtn" + (extra?(" "+extra):"");
+  b.textContent = txt;
+  b.title = title||"";
+  b.onclick = e => { e.stopPropagation(); fn(); };
   return b;
 }
 
-/***********************
- *  ACTIONS SUR PERSONNE
- ***********************/
+/***************
+ *  View modal
+ ***************/
+let currentViewId = null;
 
-/* Menu pour AJOUTER avec relation */
-function addMenu(id){
-  const r = prompt(
-    "Ajouter quel lien ?\n" +
-    "père, mère, enfant, conjoint, frère, sœur"
-  );
-  if(!r) return;
-  const rel = r.toLowerCase().replace('oe','œ');
+function openView(id){
+  currentViewId = id;
+  const p = state.persons[id];
+  $("#v_name").textContent = `${p.first||""} ${p.last||""}`.trim() || "Sans nom";
+  $("#v_birth").textContent = p.birth || "—";
+  $("#v_alive").textContent = p.alive ? "Oui" : "Non";
+  $("#v_death_wrap").style.display = p.alive ? "none" : "block";
+  $("#v_death").textContent = p.death || "—";
 
-  if(["père","pere","mère","mere"].includes(rel)) return addParent(id, rel.startsWith("p")?"m":"f");
-  if(rel==="enfant") return addChildFlow(id);
-  if(rel==="conjoint") return addSpouse(id);
-  if(rel==="frère"||rel==="frere"||rel==="sœur"||rel==="soeur") return addSibling(id, (rel[0]==="f"||rel.startsWith("sœ"))?"m":"f");
-
-  alert("Relation inconnue.");
-}
-
-/* Créer parent (père ou mère) */
-function addParent(childId, parentGender){
-  const child = state.persons[childId];
-  if(parentGender==="m" && child.fatherId){ return alert("Père déjà défini."); }
-  if(parentGender==="f" && child.motherId){ return alert("Mère déjà définie."); }
-
-  const name = prompt("Prénom du parent :"); if(!name) return;
-  const p = createPerson(name, parentGender);
-
-  if(parentGender==="m") child.fatherId = p.id;
-  else child.motherId = p.id;
-
-  // Si l’autre parent existe déjà et n’a pas de conjoint → on les marie
-  const otherId = parentGender==="m" ? child.motherId : child.fatherId;
-  if(otherId && !state.persons[otherId].spouseId){
-    state.persons[otherId].spouseId = p.id;
-    p.spouseId = otherId;
+  // remplir select de liaison avec autres personnes
+  const targetSel = $("#linkTarget");
+  targetSel.innerHTML = "";
+  for(const id2 in state.persons){
+    if(id2===id) continue;
+    const op = document.createElement("option");
+    op.value = id2;
+    const pp = state.persons[id2];
+    op.textContent = `${pp.first} ${pp.last}`.trim() || "Sans nom";
+    targetSel.appendChild(op);
   }
 
-  // liens enfants
-  p.childrenIds.push(child.id);
-  saveState(); render();
+  $("#viewModal").classList.remove("hidden");
 }
 
-/* Ajouter conjoint */
-function addSpouse(id){
-  const me = state.persons[id];
-  if(me.spouseId) return alert("Conjoint déjà défini.");
-  const name = prompt("Prénom du conjoint :"); if(!name) return;
-  let g = prompt("Genre du conjoint ? (m/f ou laisser vide)");
-  g = (g||"").toLowerCase(); if(g!=="m" && g!=="f") g=null;
-  const s = createPerson(name, g);
-  me.spouseId = s.id; s.spouseId = me.id;
-  saveState(); render();
+function closeView(){ $("#viewModal").classList.add("hidden"); currentViewId=null; }
+
+$("#viewModal").addEventListener("click",e=>{
+  if(e.target.matches("[data-close]") || e.target===e.currentTarget) closeView();
+});
+$("#editBtn").onclick = ()=> { if(currentViewId) openEdit(currentViewId); };
+$("#deleteBtn").onclick = ()=> { if(currentViewId) removePersonPrompt(currentViewId); };
+$("#linkBtn").onclick = ()=>{
+  const src = currentViewId; if(!src) return;
+  const type = $("#linkType").value;
+  const tgt = $("#linkTarget").value;
+  if(!tgt) return;
+  if(type==="spouse") linkSpouse(src,tgt);
+  if(type==="parent") linkAsParent(src,tgt);
+  if(type==="child")  linkAsParent(tgt,src);
+  if(type==="sibling") linkAsSibling(src,tgt);
+  save(); render(); openView(src); // refresh view
+};
+
+// Quick add depuis la vue
+$("#viewModal").addEventListener("click",(e)=>{
+  const btn = e.target.closest("[data-add]");
+  if(!btn) return;
+  const kind = btn.getAttribute("data-add");
+  openForm("add", kind, currentViewId);
+});
+
+/*****************
+ *  Quick add (+)
+ *****************/
+function openQuickAdd(id){
+  // ouvre la vue avec les boutons d’ajout rapides
+  openView(id);
 }
 
-/* Ajouter enfant (demande le rôle du parent courant) */
-function addChildFlow(parentId){
-  const me = state.persons[parentId];
-  let role = me.gender ? (me.gender==="m"?"père":"mère") : prompt("Ton rôle par rapport à l'enfant ? (père/mère)");
-  if(!role) return;
-  role = role.toLowerCase().startsWith("p")?"m":"f"; // m=father, f=mother
+/*****************
+ *  Edit / Add form
+ *****************/
+let formMode = "add";   // "add" | "edit"
+let formRel = null;     // relation pour "add" (mother/father/siblingF/siblingM/spouse/child)
+let formRefId = null;   // personne de référence (source)
+let editId = null;      // personne à éditer
 
-  const name = prompt("Prénom de l'enfant :"); if(!name) return;
-  const c = createPerson(name, null);
+function openForm(mode, relationOrNull, refIdOrId){
+  $("#f_title").textContent = mode==="edit"?"Modifier":"Ajouter";
+  $("#f_last").value = "";
+  $("#f_first").value = "";
+  $("#f_birth").value = "";
+  $("#f_alive").value = "true";
+  $("#f_death").value = "";
+  $("#deathRow").style.display = "none";
 
-  if(role==="m") c.fatherId = me.id; else c.motherId = me.id;
-  me.childrenIds.push(c.id);
+  formMode = mode;
+  formRel  = relationOrNull;
+  formRefId = (mode==="add") ? refIdOrId : null;
+  editId = (mode==="edit") ? refIdOrId : null;
 
-  // proposer d'associer l'autre parent si conjoint
-  if(me.spouseId){
-    const yes = confirm("Associer aussi le conjoint comme autre parent ?");
-    if(yes){
-      if(role==="m") c.motherId = me.spouseId; else c.fatherId = me.spouseId;
-      state.persons[me.spouseId].childrenIds.push(c.id);
+  // si edit, pré-remplir
+  if(mode==="edit"){
+    const p = state.persons[editId];
+    $("#f_last").value = p.last || "";
+    $("#f_first").value = p.first || "";
+    $("#f_birth").value = p.birth || "";
+    $("#f_alive").value = p.alive ? "true" : "false";
+    $("#deathRow").style.display = p.alive ? "none":"block";
+    $("#f_death").value = p.death || "";
+  }
+
+  $("#formModal").classList.remove("hidden");
+}
+
+$("#f_alive").addEventListener("change", e=>{
+  $("#deathRow").style.display = (e.target.value==="false") ? "block" : "none";
+});
+
+$("#saveFormBtn").onclick = ()=>{
+  const last = $("#f_last").value.trim();
+  const first = $("#f_first").value.trim();
+  const birth = $("#f_birth").value || "";
+  const alive = $("#f_alive").value === "true";
+  const death = alive ? null : ($("#f_death").value || null);
+
+  if(!first) return alert("Prénom requis.");
+
+  if(formMode==="add"){
+    const src = state.persons[formRefId];
+    const rel = formRel;
+
+    // déduire genre si mère/père
+    let gender = null;
+    if(rel==="mother") gender = "f";
+    if(rel==="father") gender = "m";
+
+    const np = makePerson({first,last,birth,alive,death,gender});
+
+    if(rel==="spouse"){
+      if(src.spouseId && !confirm("Un conjoint existe déjà. Remplacer ?")) { /* do nothing */ }
+      else { if(src.spouseId){ state.persons[src.spouseId].spouseId=null; }
+             src.spouseId = np.id; np.spouseId = src.id; }
     }
-  }
-  saveState(); render();
-}
-
-/* Ajouter frère/soeur → même parents */
-function addSibling(id, genderGuess){
-  const me = state.persons[id];
-  if(!me.fatherId && !me.motherId){
-    return alert("Ajoute d'abord au moins un parent pour créer un frère/soeur.");
-  }
-  const name = prompt("Prénom du frère/soeur :"); if(!name) return;
-  let g = prompt("Genre ? (m/f ou vide)");
-  g = (g||"").toLowerCase(); if(g!=="m" && g!=="f") g = null;
-
-  const s = createPerson(name, g);
-  s.fatherId = me.fatherId || null;
-  s.motherId = me.motherId || null;
-
-  if(me.fatherId) state.persons[me.fatherId].childrenIds.push(s.id);
-  if(me.motherId) state.persons[me.motherId].childrenIds.push(s.id);
-
-  saveState(); render();
-}
-
-/* Modifier nom / genre */
-function editPerson(id){
-  const p = state.persons[id];
-  const n = prompt("Nouveau prénom :", p.name);
-  if(n){ p.name = n; }
-  let g = prompt("Genre ? (m/f ou vide)", p.gender || "");
-  g = (g||"").toLowerCase(); if(g!=="m" && g!=="f") g=null;
-  p.gender = g;
-  saveState(); render();
-}
-
-/* Supprimer une personne (garde les enfants mais supprime les liens) */
-function deletePerson(id){
-  if(id === state.rootId){
-    if(!confirm("Supprimer la personne racine ? (l'arbre restera mais sans elle)")) return;
-    state.rootId = null;
-    // s'il reste des personnes, on choisit quelqu'un d'autre comme racine
-  }
-  const p = state.persons[id];
-  if(!p) return;
-
-  // rompre liens conjugaux
-  if(p.spouseId && state.persons[p.spouseId]){
-    state.persons[p.spouseId].spouseId = null;
-  }
-  // enlever des enfants chez parents
-  if(p.fatherId && state.persons[p.fatherId]){
-    state.persons[p.fatherId].childrenIds = state.persons[p.fatherId].childrenIds.filter(cid=>cid!==id);
-  }
-  if(p.motherId && state.persons[p.motherId]){
-    state.persons[p.motherId].childrenIds = state.persons[p.motherId].childrenIds.filter(cid=>cid!==id);
-  }
-  // retirer références parentales chez ses enfants
-  for(const cid of p.childrenIds){
-    const c = state.persons[cid];
-    if(!c) continue;
-    if(c.fatherId===id) c.fatherId=null;
-    if(c.motherId===id) c.motherId=null;
-  }
-
-  delete state.persons[id];
-
-  // si plus de racine, choisir un survivant arbitraire
-  if(!state.rootId){
-    const first = Object.keys(state.persons)[0];
-    state.rootId = first || null;
-  }
-
-  saveState(); render();
-}
-
-/***********************
- * Lier deux personnes
- ***********************/
-function linkMenu(srcId){
-  const choice = prompt(
-    "Créer un lien avec…\n" +
-    "1 = Conjoint\n2 = Parent de…\n3 = Enfant de…\n4 = Frère/Soœur de…\n\nEntre 1, 2, 3 ou 4"
-  );
-  if(!choice) return;
-
-  const targetName = prompt("Prénom exact de l’autre personne (déjà créée) :");
-  if(!targetName) return;
-  const targetId = findByName(targetName);
-  if(!targetId){ alert("Personne introuvable (utilise exactement le même prénom)."); return; }
-
-  if(choice==="1") return linkSpouse(srcId, targetId);
-  if(choice==="2") return linkAsParent(srcId, targetId);
-  if(choice==="3") return linkAsChild(srcId, targetId);
-  if(choice==="4") return linkAsSibling(srcId, targetId);
-}
-
-function findByName(name){
-  name = name.trim().toLowerCase();
-  for(const id in state.persons){
-    if(state.persons[id].name.trim().toLowerCase() === name) return id;
-  }
-  return null;
-}
-
-function ensureArrPush(arr,id){ if(!arr.includes(id)) arr.push(id); }
-
-function linkSpouse(aId,bId){
-  const a=state.persons[aId], b=state.persons[bId];
-  if(a.spouseId || b.spouseId) if(!confirm("Un des deux a déjà un conjoint. Remplacer ?")) return;
-  a.spouseId=b.id; b.spouseId=a.id;
-  saveState(); render();
-}
-function linkAsParent(parentId, childId){
-  const parent = state.persons[parentId], child = state.persons[childId];
-  let role = parent.gender ? (parent.gender==="m"?"père":"mère") : prompt("Le parent est père ou mère ?");
-  if(!role) return;
-  if(role.toLowerCase().startsWith("p")) child.fatherId = parent.id; else child.motherId = parent.id;
-  ensureArrPush(parent.childrenIds, child.id);
-  saveState(); render();
-}
-function linkAsChild(childId, parentId){
-  // juste l'inverse de linkAsParent
-  linkAsParent(parentId, childId);
-}
-function linkAsSibling(aId,bId){
-  const a=state.persons[aId], b=state.persons[bId];
-  if(!a.fatherId && !a.motherId && !b.fatherId && !b.motherId){
-    alert("Définis au moins un parent pour l'un des deux avant de lier comme frères/soeurs.");
-    return;
-  }
-  // copie les parents connus d'un côté vers l'autre
-  if(a.fatherId) b.fatherId = a.fatherId;
-  if(a.motherId) b.motherId = a.motherId;
-  if(b.fatherId) a.fatherId = b.fatherId;
-  if(b.motherId) a.motherId = b.motherId;
-
-  const father = a.fatherId || b.fatherId;
-  const mother = a.motherId || b.motherId;
-  if(father) ensureArrPush(state.persons[father].childrenIds, a.id), ensureArrPush(state.persons[father].childrenIds, b.id);
-  if(mother) ensureArrPush(state.persons[mother].childrenIds, a.id), ensureArrPush(state.persons[mother].childrenIds, b.id);
-
-  saveState(); render();
+    if(rel==="child"){
+      // attribue le parent actuel, et l’autre parent si conjoint
+      if(src.gender==="m") np.fatherId = src.id; else if(src.gender==="f") np.motherId = src.id;
+      src.childrenIds.push(np.id);
+      if(src.spouseId){
+        const sp = state.persons[src.spouseId];
+        if(sp.gender==="m") np.fatherId = sp.id;
+        if(sp.gender==="f") np.motherId = sp.id;
+        sp.childrenIds.push(np.id);
+      }
+    }
+    if(rel==="mother"){
+      if(src.motherId) alert("Mère déjà définie — remplacée.");
+      src.motherId = np.id;
+      np.childrenIds.push(src.id);
+      // si père déjà présent, marier
+      if(src.fatherId && !np.spouseId){ np.spouseId = src.fatherId; state.persons[src.fatherId].spouseId = np.id; }
     }
