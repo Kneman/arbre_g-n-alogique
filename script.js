@@ -420,3 +420,29 @@ $("#saveFormBtn").onclick = ()=>{
       // si père déjà présent, marier
       if(src.fatherId && !np.spouseId){ np.spouseId = src.fatherId; state.persons[src.fatherId].spouseId = np.id; }
     }
+    document.getElementById("startBtn").addEventListener("click", () => {
+  const prenom = document.getElementById("firstNameInput").value.trim();
+
+  if (prenom !== "") {
+    // Créer le premier noeud de l'arbre
+    const root = {
+      id: Date.now(),
+      prenom: prenom,
+      nom: "",
+      naissance: "",
+      mort: "",
+      lien: "Moi",
+      enfants: []
+    };
+
+    // Sauvegarde du root en mémoire
+    window.familyTree = root;
+
+    // Masquer la popup
+    document.getElementById("welcomePopup").style.display = "none";
+
+    // Afficher l'arbre
+    document.getElementById("treeContainer").style.display = "block";
+    renderTree(root); // <--- fonction qui dessine l'arbre
+  }
+});
