@@ -1,128 +1,126 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Arbre Généalogique</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <!-- Écran d’accueil -->
-  <div id="start" class="start-screen">
+  <div id="welcome" class="overlay show">
     <div class="card">
       <h1>🌳 Bienvenue</h1>
       <p>Entre ton prénom pour créer la première fiche :</p>
-      <input id="startFirst" type="text" placeholder="Prénom" />
+      <input id="w_first" type="text" placeholder="Prénom" />
       <div class="row">
-        <button id="startBtn" class="btn primary">Commencer</button>
+        <button id="w_start" class="btn primary">Commencer</button>
       </div>
-      <small class="muted">Tu pourras ajouter toute la famille ensuite.</small>
+      <small class="muted">Tu pourras ensuite ajouter tes parents, grands-parents, etc.</small>
     </div>
   </div>
 
-  <!-- Barre d’actions -->
-  <header class="topbar hidden" id="topbar">
+  <!-- Topbar -->
+  <header class="topbar">
     <div class="left">
-      <strong>Mon Arbre Généalogique</strong>
+      <strong>Mon Arbre</strong>
     </div>
     <div class="right">
-      <button id="exportBtn" class="btn">💾 Export JSON</button>
-      <button id="importBtn" class="btn">📂 Import JSON</button>
-      <button id="pngBtn" class="btn">🖼 PNG</button>
+      <button id="btnExport" class="btn">💾 Export JSON</button>
+      <input id="fileImport" type="file" accept=".json,application/json" hidden />
+      <button id="btnImport" class="btn">📂 Import JSON</button>
+      <button id="btnPng" class="btn">🖼 PNG</button>
       <span class="sep"></span>
-      <button id="zoomOutBtn" class="btn">➖</button>
-      <button id="zoomResetBtn" class="btn">🔄</button>
-      <button id="zoomInBtn" class="btn">➕</button>
+      <button id="btnZoomOut" class="btn">➖</button>
+      <button id="btnZoomReset" class="btn">🔄</button>
+      <button id="btnZoomIn" class="btn">➕</button>
       <span class="sep"></span>
-      <button id="resetBtn" class="btn danger">♻️ Réinitialiser</button>
+      <button id="btnReset" class="btn danger">♻️ Réinitialiser</button>
     </div>
   </header>
 
-  <!-- Zone pan/zoom -->
-  <main id="viewport" class="viewport hidden">
-    <div id="stage" class="stage" style="transform: translate(0px,0px) scale(1)">
-      <div id="tree"></div>
+  <!-- Zone Pan/Zoom -->
+  <main id="viewport" class="viewport">
+    <div id="stage" class="stage">
+      <svg id="links" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="nodes"></div>
     </div>
   </main>
 
-  <!-- Pop-up fiche (lecture + actions) -->
-  <div id="viewModal" class="modal hidden">
-    <div class="modal-content">
+  <!-- Modal fiche (voir/ajouter/lier/modifier/supprimer) -->
+  <div id="viewModal" class="overlay">
+    <div class="card modal">
       <button class="close" data-close>×</button>
-      <h2 id="v_name"></h2>
-      <div class="grid">
-        <div><b>Naissance :</b> <span id="v_birth"></span></div>
-        <div><b>En vie :</b> <span id="v_alive"></span></div>
-        <div id="v_death_wrap"><b>Décès :</b> <span id="v_death"></span></div>
+      <h2 id="v_title">Fiche</h2>
+      <div class="grid2">
+        <div><b>Naissance :</b> <span id="v_birth">—</span></div>
+        <div><b>En vie :</b> <span id="v_alive">—</span></div>
+        <div id="v_death_wrap"><b>Décès :</b> <span id="v_death">—</span></div>
       </div>
 
-      <div class="section">
-        <div class="section-title">Ajouter un membre lié</div>
-        <div class="quick-actions">
-          <button class="btn small" data-add="mother">Mère</button>
-          <button class="btn small" data-add="father">Père</button>
-          <button class="btn small" data-add="siblingF">Sœur</button>
-          <button class="btn small" data-add="siblingM">Frère</button>
-          <button class="btn small" data-add="spouse">Conjoint</button>
-          <button class="btn small" data-add="child">Enfant</button>
-        </div>
+      <h3>Ajouter un membre lié</h3>
+      <div class="actions">
+        <button class="btn sm" data-add="parent">Père/Mère</button>
+        <button class="btn sm" data-add="child">Enfant</button>
+        <button class="btn sm" data-add="sibling">Frère/Sœur</button>
+        <button class="btn sm" data-add="spouse">Conjoint(e)</button>
       </div>
 
-      <div class="section">
-        <div class="section-title">Lier avec un membre existant</div>
-        <div class="link-existing">
-          <select id="linkType">
-            <option value="spouse">Conjoint</option>
-            <option value="parent">Est parent de…</option>
-            <option value="child">Est enfant de…</option>
-            <option value="sibling">Frère/Sœur de…</option>
-          </select>
-          <select id="linkTarget"></select>
-          <button id="linkBtn" class="btn">🔗 Lier</button>
-        </div>
+      <h3>Lier avec un membre existant</h3>
+      <div class="row wrap">
+        <select id="linkType">
+          <option value="spouse">Conjoint(e)</option>
+          <option value="parent">Est parent de…</option>
+          <option value="child">Est enfant de…</option>
+          <option value="sibling">Frère/Sœur de…</option>
+        </select>
+        <select id="linkTarget"></select>
+        <button id="btnLink" class="btn">🔗 Lier</button>
       </div>
 
-      <div class="section">
-        <button id="editBtn" class="btn">✏️ Modifier</button>
-        <button id="deleteBtn" class="btn danger">🗑 Supprimer</button>
+      <div class="actions">
+        <button id="btnEdit" class="btn">✏️ Modifier</button>
+        <button id="btnDelete" class="btn danger">🗑 Supprimer</button>
       </div>
     </div>
   </div>
 
-  <!-- Pop-up formulaire (ajout / édition) -->
-  <div id="formModal" class="modal hidden">
-    <div class="modal-content">
+  <!-- Modal formulaire (ajout / édition) -->
+  <div id="formModal" class="overlay">
+    <div class="card modal">
       <button class="close" data-close>×</button>
       <h2 id="f_title">Ajouter</h2>
 
       <div class="form">
-        <div class="row">
-          <label>Nom</label>
-          <input id="f_last" type="text" placeholder="Nom de famille" />
-        </div>
-        <div class="row">
-          <label>Prénom</label>
+        <label>Nom de famille
+          <input id="f_last" type="text" placeholder="Nom" />
+        </label>
+        <label>Prénom
           <input id="f_first" type="text" placeholder="Prénom" />
-        </div>
-        <div class="row">
-          <label>Date de naissance</label>
+        </label>
+        <label>Date de naissance
           <input id="f_birth" type="date" />
-        </div>
-        <div class="row">
-          <label>En vie ?</label>
+        </label>
+        <label>En vie ?
           <select id="f_alive">
             <option value="true">Oui</option>
             <option value="false">Non</option>
           </select>
-        </div>
-        <div class="row" id="deathRow" style="display:none">
-          <label>Date de décès</label>
+        </label>
+        <label id="deathRow" style="display:none">Date de décès
           <input id="f_death" type="date" />
+        </label>
+
+        <div id="childSecondParentRow" class="row" style="display:none">
+          <label style="width:100%">
+            Deuxième parent (optionnel, si l’enfant a 2 parents)
+            <select id="secondParent"></select>
+          </label>
         </div>
       </div>
 
-      <div class="section">
-        <button id="saveFormBtn" class="btn primary">Enregistrer</button>
+      <div class="actions">
+        <button id="btnSaveForm" class="btn primary">Enregistrer</button>
       </div>
     </div>
   </div>
