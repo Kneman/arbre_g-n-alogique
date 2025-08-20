@@ -4,10 +4,8 @@
   --text:#1f2937;
   --muted:#6b7280;
   --pri:#3b82f6;
-  --pri-700:#1d4ed8;
   --danger:#ef4444;
   --line:#94a3b8;
-  --node-bg:#ffffff;
   --node-bd:#93c5fd;
 }
 
@@ -37,13 +35,19 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-appl
 .btn.small{padding:6px 8px;border-radius:8px}
 
 /* Pan/Zoom viewport */
-.viewport{position:fixed;inset:50px 0 0 0; /* sous la topbar */ overflow:hidden}
+.viewport{position:fixed;inset:50px 0 0 0; overflow:hidden}
 .stage{position:absolute;left:50%;top:40%; transform-origin:0 0}
 #tree{display:flex;justify-content:center}
 
-/* L’arbre en UL/LI + lignes */
-.tree-root>ul{padding-top:20px;display:flex;justify-content:center;gap:18px;position:relative;flex-wrap:wrap}
-.tree-root ul ul{padding-top:20px;display:flex;justify-content:center;gap:18px;position:relative;flex-wrap:wrap}
+/* Arbre UL/LI + lignes */
+.tree-root>ul,
+.tree-root ul ul{
+  padding-top:20px;display:flex;justify-content:center;gap:18px;position:relative;flex-wrap:wrap
+}
+.tree-root ul ul::before{
+  content:"";position:absolute;top:0;left:50%;border-left:2px solid var(--line);width:0;height:20px
+}
+.tree-root>ul::before{display:none}
 
 .tree-root li{list-style:none;text-align:center;position:relative;padding:20px 6px 0 6px}
 .tree-root li::before,
@@ -58,9 +62,9 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-appl
 .tree-root li:first-child::before{border:none}
 .tree-root li:last-child::after{border:none}
 
-/* Nœud (personne seule ou couple) */
+/* Nœud (personne ou couple) */
 .node{
-  display:inline-flex;align-items:stretch;gap:8px;background:var(--node-bg);
+  display:inline-flex;align-items:stretch;gap:8px;background:#fff;
   border:2px solid var(--node-bd);border-radius:16px;padding:8px 10px;
   box-shadow:0 10px 30px rgba(59,130,246,.15);min-width:150px
 }
