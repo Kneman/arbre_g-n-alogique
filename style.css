@@ -1,7 +1,7 @@
 :root{
   --bg:#f6f8fc;
   --card:#ffffff;
-  --text:#1f2937;
+  --text:#111827;
   --muted:#6b7280;
   --pri:#3b82f6;
   --danger:#ef4444;
@@ -10,86 +10,58 @@
 }
 
 *{box-sizing:border-box}
+html,body{height:100%}
 body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
 
-/* Accueil */
-.start-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#e0f2fe,#ecfdf5)}
-.card{background:var(--card);border-radius:18px;padding:22px;width:min(92vw,420px);box-shadow:0 18px 50px rgba(0,0,0,.18);text-align:center}
-.card input{width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:12px;font-size:16px;outline:none}
-.card input:focus{border-color:var(--pri)}
-.row{margin-top:12px}
-.muted{color:var(--muted)}
-
-.hidden{display:none}
-
 /* Topbar */
-.topbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--card);border-bottom:1px solid #e5e7eb}
+.topbar{position:sticky;top:0;z-index:10;display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--card);border-bottom:1px solid #e5e7eb}
 .topbar .right,.topbar .left{display:flex;gap:8px;align-items:center}
 .sep{display:inline-block;width:1px;height:22px;background:#e5e7eb;margin:0 4px}
-
-/* Buttons */
 .btn{border:none;border-radius:10px;background:#eaf1ff;color:#0f172a;padding:8px 12px;cursor:pointer}
 .btn:hover{filter:brightness(.98)}
 .btn.primary{background:var(--pri);color:#fff}
 .btn.danger{background:var(--danger);color:#fff}
-.btn.small{padding:6px 8px;border-radius:8px}
+.btn.sm{padding:6px 8px;border-radius:8px}
 
-/* Pan/Zoom viewport */
-.viewport{position:fixed;inset:50px 0 0 0; overflow:hidden}
-.stage{position:absolute;left:50%;top:40%; transform-origin:0 0}
-#tree{display:flex;justify-content:center}
+/* Pan/Zoom area */
+.viewport{position:fixed;inset:54px 0 0 0; overflow:hidden}
+.stage{position:absolute; left:50%; top:40%; transform-origin:0 0}
+#links{position:absolute; left:0; top:0; width:1px; height:1px; overflow:visible}
+#nodes{position:absolute; left:0; top:0}
 
-/* Arbre UL/LI + lignes */
-.tree-root>ul,
-.tree-root ul ul{
-  padding-top:20px;display:flex;justify-content:center;gap:18px;position:relative;flex-wrap:wrap
-}
-.tree-root ul ul::before{
-  content:"";position:absolute;top:0;left:50%;border-left:2px solid var(--line);width:0;height:20px
-}
-.tree-root>ul::before{display:none}
-
-.tree-root li{list-style:none;text-align:center;position:relative;padding:20px 6px 0 6px}
-.tree-root li::before,
-.tree-root li::after{
-  content:"";position:absolute;top:0;border-top:2px solid var(--line);width:50%;height:20px
-}
-.tree-root li::before{right:50%}
-.tree-root li::after{left:50%}
-.tree-root li:only-child::before,
-.tree-root li:only-child::after{display:none}
-.tree-root li:only-child{padding-top:0}
-.tree-root li:first-child::before{border:none}
-.tree-root li:last-child::after{border:none}
-
-/* Nœud (personne ou couple) */
-.node{
-  display:inline-flex;align-items:stretch;gap:8px;background:#fff;
-  border:2px solid var(--node-bd);border-radius:16px;padding:8px 10px;
-  box-shadow:0 10px 30px rgba(59,130,246,.15);min-width:150px
-}
-.card-person{
-  background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:8px 10px;min-width:140px;text-align:center
-}
-.card-person .name{font-weight:700}
-.card-person .meta{font-size:12px;color:var(--muted)}
-.actions{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
-.abtn{border:none;border-radius:8px;padding:4px 6px;background:#eef2ff;cursor:pointer;font-size:12px}
-.abtn:hover{filter:brightness(.97)}
-.abtn.danger{background:#fee2e2}
-
-.couple-sep{display:flex;align-items:center;color:var(--muted);padding:6px}
-
-/* Modal */
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center}
-.modal-content{background:#fff;border-radius:16px;padding:18px;min-width:min(92vw,520px);max-width:92vw;box-shadow:0 20px 50px rgba(0,0,0,.25)}
-.modal.hidden{display:none}
-.modal .close{float:right;border:none;background:transparent;font-size:24px;cursor:pointer}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
-.section{margin-top:12px}
-.section-title{font-weight:700;margin-bottom:6px}
-.quick-actions{display:flex;flex-wrap:wrap;gap:8px}
-.link-existing{display:flex;gap:8px;flex-wrap:wrap}
-.form .row{display:flex;flex-direction:column;gap:6px;margin:8px 0}
+/* Overlay + modals */
+.overlay{position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:20}
+.overlay.show{display:flex}
+.card{background:#fff;border-radius:16px;padding:18px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.card.modal{width:min(92vw,560px)}
+.card .close{float:right;border:none;background:transparent;font-size:24px;cursor:pointer}
+.muted{color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;margin-top:10px}
+.row.wrap{flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.form{display:grid;gap:10px;margin-top:8px}
+.form label{display:flex;flex-direction:column;gap:6px}
 .form input,.form select{padding:10px;border:2px solid #e5e7eb;border-radius:10px;font-size:14px}
 .form input:focus,.form select:focus{border-color:var(--pri)}
+
+/* Person cards */
+.person{
+  position:absolute;
+  width:170px; min-height:70px;
+  background:#fff;
+  border:2px solid var(--node-bd);
+  border-radius:14px;
+  padding:8px 10px;
+  box-shadow:0 10px 30px rgba(59,130,246,.15);
+  text-align:center;
+}
+.person .name{font-weight:700}
+.person .meta{font-size:12px;color:var(--muted)}
+.person .acts{display:flex;gap:6px;justify-content:center;margin-top:6px;flex-wrap:wrap}
+.person .abtn{border:none;border-radius:8px;padding:4px 6px;background:#eef2ff;cursor:pointer;font-size:12px}
+.person .abtn:hover{filter:brightness(.97)}
+.person .abtn.danger{background:#fee2e2}
+
+/* Couple connector (optional small line between spouses) */
+.spouse-line{stroke:var(--line); stroke-width:2px}
+.link{stroke:var(--line); stroke-width:2px; fill:none}
