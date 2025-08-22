@@ -4,49 +4,53 @@
   <meta charset="UTF-8">
   <title>Arbre Généalogique</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
-  <div class="toolbar">
-    <button onclick="setStyle('classique')">Style Classique</button>
-    <button onclick="setStyle('moderne')">Style Moderne</button>
+  <div id="toolbar">
+    <button onclick="setStyle('classic')">Style Classique</button>
+    <button onclick="setStyle('modern')">Style Moderne</button>
     <button onclick="exportJSON()">Exporter JSON</button>
     <button onclick="importJSON()">Importer JSON</button>
     <button onclick="exportPNG()">Exporter PNG</button>
-    <button onclick="resetZoom()">Recentrer</button>
+    <button onclick="resetView()">Recentrer</button>
   </div>
 
-  <svg id="tree" width="100%" height="600"></svg>
+  <div id="tree-container"></div>
 
-  <!-- Popup -->
-  <div id="popup" class="popup hidden">
+  <!-- Popup ajout personne -->
+  <div id="popup" class="hidden">
     <div class="popup-content">
-      <h2 id="popup-title">Ajouter un membre</h2>
-      <label>Prénom: <input id="prenom"></label>
-      <label>Nom: <input id="nom"></label>
-      <label>Date de naissance: <input type="date" id="dob"></label>
-      <label>En vie ? 
-        <select id="alive">
-          <option value="oui">Oui</option>
-          <option value="non">Non</option>
-        </select>
-      </label>
-      <label id="dod-label" class="hidden">Date de décès: <input type="date" id="dod"></label>
-      <label>Lien avec: 
-        <select id="relation">
-          <option value="pere">Père</option>
-          <option value="mere">Mère</option>
-          <option value="conjoint">Conjoint</option>
-          <option value="enfant">Enfant</option>
-          <option value="frere">Frère</option>
-          <option value="soeur">Sœur</option>
-        </select>
-      </label>
-      <button onclick="saveMember()">Enregistrer</button>
-      <button onclick="closePopup()">Annuler</button>
+      <h2>Ajouter une personne</h2>
+      <label>Nom de famille :</label>
+      <input type="text" id="lastName"><br>
+      <label>Prénom :</label>
+      <input type="text" id="firstName"><br>
+      <label>Date de naissance :</label>
+      <input type="date" id="birthDate"><br>
+      <label>En vie ?</label>
+      <button onclick="setAlive(true)" id="btnAlive">Oui</button>
+      <button onclick="setAlive(false)" id="btnDead">Non</button><br>
+      <div id="deathField" class="hidden">
+        <label>Date de décès :</label>
+        <input type="date" id="deathDate"><br>
+      </div>
+      <label>Relation :</label>
+      <div id="relationButtons">
+        <button onclick="selectRelation('pere')">Père</button>
+        <button onclick="selectRelation('mere')">Mère</button>
+        <button onclick="selectRelation('frere')">Frère</button>
+        <button onclick="selectRelation('soeur')">Sœur</button>
+        <button onclick="selectRelation('conjoint')">Conjoint</button>
+        <button onclick="selectRelation('enfant')">Enfant</button>
+      </div>
+      <div class="popup-actions">
+        <button onclick="savePerson()">Ajouter</button>
+        <button onclick="closePopup()">Annuler</button>
+      </div>
     </div>
   </div>
 
-  <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
