@@ -1,132 +1,52 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8">
   <title>Arbre Généalogique</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Écran d’accueil -->
-  <div id="welcome" class="overlay show">
-    <div class="card">
-      <h1>🌳 Bienvenue</h1>
-      <p>Entre ton prénom pour créer la première fiche :</p>
-      <input id="w_first" type="text" placeholder="Prénom" />
-      <div class="row">
-        <button id="w_start" class="btn primary">Commencer</button>
-      </div>
-      <small class="muted">Tu pourras ensuite ajouter tes parents, grands-parents, etc.</small>
-    </div>
+  <div class="toolbar">
+    <button onclick="setStyle('classique')">Style Classique</button>
+    <button onclick="setStyle('moderne')">Style Moderne</button>
+    <button onclick="exportJSON()">Exporter JSON</button>
+    <button onclick="importJSON()">Importer JSON</button>
+    <button onclick="exportPNG()">Exporter PNG</button>
+    <button onclick="resetZoom()">Recentrer</button>
   </div>
 
-  <!-- Topbar -->
-  <header class="topbar">
-    <div class="left">
-      <strong>Mon Arbre</strong>
-    </div>
-    <div class="right">
-      <button id="btnExport" class="btn">💾 Export JSON</button>
-      <input id="fileImport" type="file" accept=".json,application/json" hidden />
-      <button id="btnImport" class="btn">📂 Import JSON</button>
-      <button id="btnPng" class="btn">🖼 PNG</button>
-      <span class="sep"></span>
-      <button id="btnZoomOut" class="btn">➖</button>
-      <button id="btnZoomReset" class="btn">🔄</button>
-      <button id="btnZoomIn" class="btn">➕</button>
-      <span class="sep"></span>
-      <button id="btnReset" class="btn danger">♻️ Réinitialiser</button>
-    </div>
-  </header>
+  <svg id="tree" width="100%" height="600"></svg>
 
-  <!-- Zone Pan/Zoom -->
-  <main id="viewport" class="viewport">
-    <div id="stage" class="stage">
-      <svg id="links" xmlns="http://www.w3.org/2000/svg"></svg>
-      <div id="nodes"></div>
-    </div>
-  </main>
-
-  <!-- Modal fiche (voir/ajouter/lier/modifier/supprimer) -->
-  <div id="viewModal" class="overlay">
-    <div class="card modal">
-      <button class="close" data-close>×</button>
-      <h2 id="v_title">Fiche</h2>
-      <div class="grid2">
-        <div><b>Naissance :</b> <span id="v_birth">—</span></div>
-        <div><b>En vie :</b> <span id="v_alive">—</span></div>
-        <div id="v_death_wrap"><b>Décès :</b> <span id="v_death">—</span></div>
-      </div>
-
-      <h3>Ajouter un membre lié</h3>
-      <div class="actions">
-        <button class="btn sm" data-add="parent">Père/Mère</button>
-        <button class="btn sm" data-add="child">Enfant</button>
-        <button class="btn sm" data-add="sibling">Frère/Sœur</button>
-        <button class="btn sm" data-add="spouse">Conjoint(e)</button>
-      </div>
-
-      <h3>Lier avec un membre existant</h3>
-      <div class="row wrap">
-        <select id="linkType">
-          <option value="spouse">Conjoint(e)</option>
-          <option value="parent">Est parent de…</option>
-          <option value="child">Est enfant de…</option>
-          <option value="sibling">Frère/Sœur de…</option>
+  <!-- Popup -->
+  <div id="popup" class="popup hidden">
+    <div class="popup-content">
+      <h2 id="popup-title">Ajouter un membre</h2>
+      <label>Prénom: <input id="prenom"></label>
+      <label>Nom: <input id="nom"></label>
+      <label>Date de naissance: <input type="date" id="dob"></label>
+      <label>En vie ? 
+        <select id="alive">
+          <option value="oui">Oui</option>
+          <option value="non">Non</option>
         </select>
-        <select id="linkTarget"></select>
-        <button id="btnLink" class="btn">🔗 Lier</button>
-      </div>
-
-      <div class="actions">
-        <button id="btnEdit" class="btn">✏️ Modifier</button>
-        <button id="btnDelete" class="btn danger">🗑 Supprimer</button>
-      </div>
+      </label>
+      <label id="dod-label" class="hidden">Date de décès: <input type="date" id="dod"></label>
+      <label>Lien avec: 
+        <select id="relation">
+          <option value="pere">Père</option>
+          <option value="mere">Mère</option>
+          <option value="conjoint">Conjoint</option>
+          <option value="enfant">Enfant</option>
+          <option value="frere">Frère</option>
+          <option value="soeur">Sœur</option>
+        </select>
+      </label>
+      <button onclick="saveMember()">Enregistrer</button>
+      <button onclick="closePopup()">Annuler</button>
     </div>
   </div>
 
-  <!-- Modal formulaire (ajout / édition) -->
-  <div id="formModal" class="overlay">
-    <div class="card modal">
-      <button class="close" data-close>×</button>
-      <h2 id="f_title">Ajouter</h2>
-
-      <div class="form">
-        <label>Nom de famille
-          <input id="f_last" type="text" placeholder="Nom" />
-        </label>
-        <label>Prénom
-          <input id="f_first" type="text" placeholder="Prénom" />
-        </label>
-        <label>Date de naissance
-          <input id="f_birth" type="date" />
-        </label>
-        <label>En vie ?
-          <select id="f_alive">
-            <option value="true">Oui</option>
-            <option value="false">Non</option>
-          </select>
-        </label>
-        <label id="deathRow" style="display:none">Date de décès
-          <input id="f_death" type="date" />
-        </label>
-
-        <div id="childSecondParentRow" class="row" style="display:none">
-          <label style="width:100%">
-            Deuxième parent (optionnel, si l’enfant a 2 parents)
-            <select id="secondParent"></select>
-          </label>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button id="btnSaveForm" class="btn primary">Enregistrer</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- html2canvas pour PNG -->
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
