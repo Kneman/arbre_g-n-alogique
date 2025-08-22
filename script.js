@@ -1,129 +1,147 @@
-let data = { name: "Vous", children: [] };
-let currentStyle = "classique";
-let selectedNode = null;
-let svg = d3.select("#tree");
-let g = svg.append("g");
-let zoom = d3.zoom().on("zoom", (event) => g.attr("transform", event.transform));
-svg.call(zoom);
+let treeData = {
+  name: "Racine",
+  children: []
+};
 
-function setStyle(style) {
-  currentStyle = style;
-  update();
-}
+let selectedNode = null;
+let relationType = null;
+let isAlive = true;
+let style = "classic";
+
+const svg = d3.select("#tree-container").append("svg")
+  .attr("width", "100%")
+  .attr("height", "100%")
+  .call(d3.zoom().on("zoom", (e) => {
+    g.attr("transform", e.transform);
+  }))
+  .append("g");
+
+const g = svg.append("g");
+
+const treeLayout = d3.tree().nodeSize([100, 200]);
 
 function update() {
   g.selectAll("*").remove();
 
-  let root = d3.hierarchy(data);
-  let treeLayout = d3.tree().nodeSize([120, 120]);
+  const root = d3.hierarchy(treeData);
   treeLayout(root);
 
+  // Lignes
   g.selectAll(".link")
     .data(root.links())
-    .enter().append("path")
+    .enter()
+    .append("path")
     .attr("class", "link")
+    .attr("fill", "none")
+    .attr("stroke", "#999")
+    .attr("stroke-width", 2)
     .attr("d", d3.linkVertical()
       .x(d => d.x)
-      .y(d => d.y));
+      .y(d => d.y)
+    );
 
-  let nodes = g.selectAll(".node")
+  // Noeuds
+  const node = g.selectAll(".node")
     .data(root.descendants())
-    .enter().append("g")
-    .attr("class", "node " + currentStyle)
+    .enter()
+    .append("g")
+    .attr("class", "node")
     .attr("transform", d => `translate(${d.x},${d.y})`)
-    .on("click", (event, d) => { selectedNode = d; openPopup(); });
+    .on("click", (e, d) => {
+      selectedNode = d;
+      openPopup();
+    });
 
-  nodes.append("rect")
-    .attr("x", -50).attr("y", -20)
-    .attr("width", 100).attr("height", 40);
+  node.append("rect")
+    .attr("width", 120)
+    .attr("height", 50)
+    .attr("x", -60)
+    .attr("y", -25)
+    .attr("fill", style === "classic" ? "#fff" : "#e3f2fd")
+    .attr("stroke", style === "classic" ? "#000" : "#2196f3");
 
-  nodes.append("text")
-    .attr("dy", 5)
-    .text(d => d.data.prenom ? `${d.data.prenom} ${d.data.nom}` : d.data.name);
+  node.append("text")
+    .attr("dy", 0)
+    .text(d => d.data.name);
 }
 
+// --- Popup ---
 function openPopup() {
   document.getElementById("popup").classList.remove("hidden");
 }
 function closePopup() {
   document.getElementById("popup").classList.add("hidden");
 }
+function setAlive(alive) {
+  isAlive = alive;
+  document.getElementById("deathField").classList.toggle("hidden", alive);
+}
+function selectRelation(rel) {
+  relationType = rel;
+}
+function savePerson() {
+  const firstName = document.getElementById("firstName").value;
+  const lastName = document.getElementById("lastName").value;
+  const birthDate = document.getElementById("birthDate").value;
+  const deathDate = document.getElementById("deathDate").value;
 
-function saveMember() {
-  let prenom = document.getElementById("prenom").value;
-  let nom = document.getElementById("nom").value;
-  let dob = document.getElementById("dob").value;
-  let alive = document.getElementById("alive").value;
-  let dod = document.getElementById("dod").value;
-  let relation = document.getElementById("relation").value;
+  if (!firstName || !lastName) return;
 
-  let member = { prenom, nom, dob, alive, dod, children: [] };
+  const newPerson = {
+    name: `${firstName} ${lastName}`,
+    birth: birthDate,
+    death: isAlive ? null : deathDate,
+    children: []
+  };
 
   if (selectedNode) {
     if (!selectedNode.data.children) selectedNode.data.children = [];
-    if (relation === "enfant") {
-      selectedNode.data.children.push(member);
-    } else if (relation === "conjoint") {
-      selectedNode.data.conjoint = member;
-    } else if (relation === "pere" || relation === "mere") {
-      data = { ...member, children: [data] };
-    } else if (relation === "frere" || relation === "soeur") {
-      // ajouter au même niveau
-      if (selectedNode.parent) {
-        selectedNode.parent.data.children.push(member);
-      }
-    }
+    selectedNode.data.children.push(newPerson);
+  } else {
+    treeData = newPerson;
   }
 
   closePopup();
   update();
 }
 
-function exportJSON() {
-  let blob = new Blob([JSON.stringify(data)], { type: "application/json" });
-  let a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "arbre.json";
-  a.click();
+// --- Styles ---
+function setStyle(s) {
+  style = s;
+  update();
 }
 
+// --- Export / Import / Reset ---
+function exportJSON() {
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(treeData));
+  const dl = document.createElement("a");
+  dl.setAttribute("href", dataStr);
+  dl.setAttribute("download", "arbre.json");
+  dl.click();
+}
 function importJSON() {
-  let input = document.createElement("input");
+  const input = document.createElement("input");
   input.type = "file";
   input.accept = ".json";
   input.onchange = e => {
-    let file = e.target.files[0];
-    let reader = new FileReader();
-    reader.onload = () => {
-      data = JSON.parse(reader.result);
+    const file = e.target.files[0];
+    const reader = new FileReader();
+    reader.onload = e => {
+      treeData = JSON.parse(e.target.result);
       update();
     };
     reader.readAsText(file);
   };
   input.click();
 }
-
 function exportPNG() {
-  let svgElement = document.getElementById("tree");
-  let serializer = new XMLSerializer();
-  let source = serializer.serializeToString(svgElement);
-  let img = new Image();
-  img.src = "data:image/svg+xml;base64," + btoa(source);
-  img.onload = () => {
-    let canvas = document.createElement("canvas");
-    canvas.width = svgElement.clientWidth;
-    canvas.height = svgElement.clientHeight;
-    let ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0);
-    let link = document.createElement("a");
-    link.download = "arbre.png";
-    link.href = canvas.toDataURL();
-    link.click();
-  };
+  alert("Export PNG à implémenter");
 }
-
-function resetZoom() {
-  svg.transition().duration(750).call(zoom.transform, d3.zoomIdentity);
+function resetView() {
+  svg.transition().duration(750).call(
+    d3.zoom().transform,
+    d3.zoomIdentity
+  );
 }
 
 update();
