@@ -1,147 +1,126 @@
-let treeData = {
-  name: "Racine",
-  children: []
-};
-
-let selectedNode = null;
-let relationType = null;
-let isAlive = true;
+let treeData = {};
+let root, svg, g, treeLayout, zoom;
 let style = "classic";
 
-const svg = d3.select("#tree-container").append("svg")
-  .attr("width", "100%")
-  .attr("height", "100%")
-  .call(d3.zoom().on("zoom", (e) => {
-    g.attr("transform", e.transform);
-  }))
-  .append("g");
+document.getElementById("root-alive").addEventListener("change", e => {
+  document.getElementById("root-death-field").style.display = e.target.value === "no" ? "block" : "none";
+});
+document.getElementById("member-alive").addEventListener("change", e => {
+  document.getElementById("member-death-field").style.display = e.target.value === "no" ? "block" : "none";
+});
 
-const g = svg.append("g");
+// Création de la racine
+document.getElementById("start-btn").addEventListener("click", () => {
+  treeData = {
+    lastname: document.getElementById("root-lastname").value,
+    firstname: document.getElementById("root-firstname").value,
+    birth: document.getElementById("root-birth").value,
+    alive: document.getElementById("root-alive").value,
+    death: document.getElementById("root-alive").value === "no" ? document.getElementById("root-death").value : null,
+    children: []
+  };
 
-const treeLayout = d3.tree().nodeSize([100, 200]);
+  document.getElementById("start-screen").style.display = "none";
+  document.getElementById("tree-container").style.display = "block";
 
-function update() {
+  initTree();
+  update(treeData);
+});
+
+// Initialisation arbre
+function initTree() {
+  svg = d3.select("#tree-svg");
+  g = svg.append("g");
+
+  zoom = d3.zoom().on("zoom", (event) => g.attr("transform", event.transform));
+  svg.call(zoom);
+
+  treeLayout = d3.tree().nodeSize([100, 200]);
+}
+
+// Affichage arbre
+function update(source) {
   g.selectAll("*").remove();
 
-  const root = d3.hierarchy(treeData);
+  root = d3.hierarchy(treeData);
   treeLayout(root);
 
-  // Lignes
   g.selectAll(".link")
     .data(root.links())
     .enter()
     .append("path")
     .attr("class", "link")
-    .attr("fill", "none")
-    .attr("stroke", "#999")
-    .attr("stroke-width", 2)
     .attr("d", d3.linkVertical()
       .x(d => d.x)
-      .y(d => d.y)
-    );
+      .y(d => d.y));
 
-  // Noeuds
   const node = g.selectAll(".node")
     .data(root.descendants())
     .enter()
     .append("g")
     .attr("class", "node")
     .attr("transform", d => `translate(${d.x},${d.y})`)
-    .on("click", (e, d) => {
-      selectedNode = d;
-      openPopup();
-    });
+    .on("dblclick", d => openPopup(d.data));
 
   node.append("rect")
-    .attr("width", 120)
+    .attr("width", 100)
     .attr("height", 50)
-    .attr("x", -60)
-    .attr("y", -25)
-    .attr("fill", style === "classic" ? "#fff" : "#e3f2fd")
-    .attr("stroke", style === "classic" ? "#000" : "#2196f3");
+    .attr("x", -50)
+    .attr("y", -25);
 
   node.append("text")
     .attr("dy", 0)
-    .text(d => d.data.name);
+    .text(d => `${d.data.firstname} ${d.data.lastname}`);
 }
 
-// --- Popup ---
-function openPopup() {
-  document.getElementById("popup").classList.remove("hidden");
+// Popup
+function openPopup(target) {
+  document.getElementById("popup").style.display = "block";
+  document.getElementById("save-member").onclick = () => addMember(target);
 }
 function closePopup() {
-  document.getElementById("popup").classList.add("hidden");
+  document.getElementById("popup").style.display = "none";
 }
-function setAlive(alive) {
-  isAlive = alive;
-  document.getElementById("deathField").classList.toggle("hidden", alive);
-}
-function selectRelation(rel) {
-  relationType = rel;
-}
-function savePerson() {
-  const firstName = document.getElementById("firstName").value;
-  const lastName = document.getElementById("lastName").value;
-  const birthDate = document.getElementById("birthDate").value;
-  const deathDate = document.getElementById("deathDate").value;
 
-  if (!firstName || !lastName) return;
+// Ajout membre
+function addMember(target) {
+  const lastname = document.getElementById("member-lastname").value;
+  const firstname = document.getElementById("member-firstname").value;
+  const birth = document.getElementById("member-birth").value;
+  const alive = document.getElementById("member-alive").value;
+  const death = alive === "no" ? document.getElementById("member-death").value : null;
+  const relation = document.getElementById("relation-type").value;
 
-  const newPerson = {
-    name: `${firstName} ${lastName}`,
-    birth: birthDate,
-    death: isAlive ? null : deathDate,
-    children: []
-  };
+  const newPerson = { lastname, firstname, birth, alive, death, children: [] };
 
-  if (selectedNode) {
-    if (!selectedNode.data.children) selectedNode.data.children = [];
-    selectedNode.data.children.push(newPerson);
-  } else {
+  if (relation === "child") {
+    target.children = target.children || [];
+    target.children.push(newPerson);
+  } else if (relation === "parent") {
+    const clone = JSON.parse(JSON.stringify(target));
     treeData = newPerson;
+    treeData.children = [clone];
+  } else if (relation === "sibling") {
+    alert("⚠️ Ajouter un frère/une sœur ajoute l’enfant aux mêmes parents (à implémenter plus tard)");
+  } else if (relation === "spouse") {
+    target.spouse = newPerson;
   }
 
   closePopup();
-  update();
+  update(treeData);
 }
 
-// --- Styles ---
-function setStyle(s) {
-  style = s;
-  update();
-}
-
-// --- Export / Import / Reset ---
+// Fonctions outils
+function switchStyle(s) { style = s; update(treeData); }
 function exportJSON() {
-  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(treeData));
-  const dl = document.createElement("a");
-  dl.setAttribute("href", dataStr);
-  dl.setAttribute("download", "arbre.json");
-  dl.click();
+  const blob = new Blob([JSON.stringify(treeData, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "arbre.json";
+  a.click();
 }
-function importJSON() {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = ".json";
-  input.onchange = e => {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-    reader.onload = e => {
-      treeData = JSON.parse(e.target.result);
-      update();
-    };
-    reader.readAsText(file);
-  };
-  input.click();
-}
-function exportPNG() {
-  alert("Export PNG à implémenter");
-}
-function resetView() {
-  svg.transition().duration(750).call(
-    d3.zoom().transform,
-    d3.zoomIdentity
-  );
-}
-
-update();
+function importJSON() { alert("⚠️ Import JSON à coder"); }
+function exportPNG() { alert("⚠️ Export PNG à coder"); }
+function centerTree() { svg.transition().duration(750).call(zoom.transform, d3.zoomIdentity); }
+function zoomIn() { svg.transition().call(zoom.scaleBy, 1.2); }
+function zoomOut() { svg.transition().call(zoom.scaleBy, 0.8); }
