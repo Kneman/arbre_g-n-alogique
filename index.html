@@ -1,52 +1,86 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <title>Arbre Généalogique</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mon Arbre Généalogique</title>
+  <link rel="stylesheet" href="style.css" />
   <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
-  <div id="toolbar">
-    <button onclick="setStyle('classic')">Style Classique</button>
-    <button onclick="setStyle('modern')">Style Moderne</button>
-    <button onclick="exportJSON()">Exporter JSON</button>
-    <button onclick="importJSON()">Importer JSON</button>
-    <button onclick="exportPNG()">Exporter PNG</button>
-    <button onclick="resetView()">Recentrer</button>
+  <!-- Toolbar -->
+  <div class="topbar">
+    <div class="brand">Mon Arbre Généalogique</div>
+    <div class="tools">
+      <button id="btn-style">Style Moderne</button>
+      <button id="btn-export">📄 Exporter JSON</button>
+      <button id="btn-import">📥 Importer JSON</button>
+      <button id="btn-png">🖼️ PNG</button>
+      <button id="btn-zoomout">－</button>
+      <button id="btn-fit">⤢</button>
+      <button id="btn-zoomin">＋</button>
+      <button id="btn-reset" class="danger">♻️ Réinitialiser</button>
+    </div>
   </div>
 
-  <div id="tree-container"></div>
+  <!-- Zone graphique -->
+  <div id="stage">
+    <svg id="tree" width="100%" height="100%"></svg>
+  </div>
 
-  <!-- Popup ajout personne -->
-  <div id="popup" class="hidden">
-    <div class="popup-content">
-      <h2>Ajouter une personne</h2>
-      <label>Nom de famille :</label>
-      <input type="text" id="lastName"><br>
-      <label>Prénom :</label>
-      <input type="text" id="firstName"><br>
-      <label>Date de naissance :</label>
-      <input type="date" id="birthDate"><br>
-      <label>En vie ?</label>
-      <button onclick="setAlive(true)" id="btnAlive">Oui</button>
-      <button onclick="setAlive(false)" id="btnDead">Non</button><br>
-      <div id="deathField" class="hidden">
-        <label>Date de décès :</label>
-        <input type="date" id="deathDate"><br>
+  <!-- Écran de bienvenue -->
+  <div id="welcome" class="overlay">
+    <div class="card">
+      <h2>🌳 Bienvenue</h2>
+      <p>Entre ton prénom pour créer la première fiche :</p>
+      <input id="welcome-firstname" placeholder="Prénom" />
+      <div class="row">
+        <button id="welcome-start">Commencer</button>
       </div>
-      <label>Relation :</label>
-      <div id="relationButtons">
-        <button onclick="selectRelation('pere')">Père</button>
-        <button onclick="selectRelation('mere')">Mère</button>
-        <button onclick="selectRelation('frere')">Frère</button>
-        <button onclick="selectRelation('soeur')">Sœur</button>
-        <button onclick="selectRelation('conjoint')">Conjoint</button>
-        <button onclick="selectRelation('enfant')">Enfant</button>
+      <small>Tu pourras ajouter toute la famille ensuite.</small>
+    </div>
+  </div>
+
+  <!-- Popup d’édition/ajout -->
+  <div id="popup" class="overlay hidden">
+    <div class="card">
+      <h3 id="popup-title">Ajouter / modifier</h3>
+
+      <div class="grid">
+        <label>Nom</label>
+        <input id="inp-last" placeholder="Nom de famille" />
+        <label>Prénom</label>
+        <input id="inp-first" placeholder="Prénom" />
+        <label>Date de naissance</label>
+        <input id="inp-birth" type="date" />
+        <label>En vie ?</label>
+        <div class="btnset">
+          <button data-alive="true" class="toggle alive active">Oui</button>
+          <button data-alive="false" class="toggle alive">Non</button>
+        </div>
+        <label class="dead-only">Date de décès</label>
+        <input id="inp-death" type="date" class="dead-only" />
       </div>
-      <div class="popup-actions">
-        <button onclick="savePerson()">Ajouter</button>
-        <button onclick="closePopup()">Annuler</button>
+
+      <div id="rel-wrap" class="rel-wrap">
+        <div>Relation à <span id="rel-target"></span> :</div>
+        <div class="btnset wrap">
+          <button class="rel" data-rel="pere">Père</button>
+          <button class="rel" data-rel="mere">Mère</button>
+          <button class="rel" data-rel="conjoint">Conjoint</button>
+          <button class="rel" data-rel="enfant">Enfant</button>
+          <button class="rel" data-rel="frere">Frère</button>
+          <button class="rel" data-rel="soeur">Sœur</button>
+        </div>
+        <div id="coparent-wrap" class="hidden">
+          <label>Autre parent (coparent) :</label>
+          <select id="sel-coparent"></select>
+        </div>
+      </div>
+
+      <div class="row end">
+        <button id="popup-save" class="primary">Enregistrer</button>
+        <button id="popup-cancel">Annuler</button>
       </div>
     </div>
   </div>
